@@ -1,0 +1,752 @@
+---
+title: "CyberAmongus"
+author: "Shawn"
+date: "2024-10-11"
+output:
+  pdf_document:
+    toc: true      
+    toc_depth: 2   
+
+---
+# The Standard Features 
+Unauthorized-Logons 
+File Activity unusual access to sensitive files
+Emails to outside domains
+Outside working hours Logons
+External Device Connections
+
+
+# Feature 1, Unauthorized Logons
+## Packages
+```{r}
+
+
+suppressMessages({
+options(repos = "http://cran.us.r-project.org")
+install.packages("tinytex")
+install.packages("dplyr")
+install.packages("purrr")
+install.packages("readr")
+install.packages("lubridate")
+
+
+})
+```
+```{r}
+library(lubridate)
+library(dplyr)
+library(purrr)
+library(readr)
+```
+
+
+## Preprocessing
+
+
+```{r}
+install.packages("stringr")
+library(stringr)
+```
+
+```{r}
+# Load necessary libraries
+library(dplyr)
+library(stringr)
+
+# Specify the directories where your CSV files are located
+directories <- c("C:\\Users\\Shawn\\Documents\\CyberAmongus\\r4.2\\answers\\answers\\r4.2-1", 
+                 "C:\\Users\\Shawn\\Documents\\CyberAmongus\\r4.2\\answers\\answers\\r4.2-2", 
+                 "C:\\Users\\Shawn\\Documents\\CyberAmongus\\r4.2\\answers\\answers\\r4.2-3") 
+
+# Initialize an empty vector to store usernames
+all_usernames <- c()
+
+# Loop through each directory
+for (directory in directories) {
+  # List all CSV files in the directory
+  csv_files <- list.files(directory, pattern = "\\.csv$", full.names = TRUE)
+  
+  # Loop through each file and extract the username
+  for (file in csv_files) {
+    # Extract the username after the last dash
+    username <- str_extract(basename(file), "([^-]+)$")
+    
+    # Print the extracted username for debugging
+    print(paste("Extracted username from", file, ":", username))
+    
+    # Check if username is not NA and append to the list
+    if (!is.na(username) && username != "") {
+      all_usernames <- c(all_usernames, username)
+    }
+  }
+}
+
+# Create a dataframe with unique usernames
+unique_usernames <- unique(data.frame(user_id = all_usernames))
+
+# Check the result
+print(unique_usernames)
+
+
+```
+
+
+```{r}
+targets <- unique_usernames 
+targets$user_id <- sub("\\.csv$", "", targets$user_id)
+```
+
+```{r}
+rm(unique_usernames)
+```
+
+
+```{r}
+# I need to add a time frame before combining files
+# Load all LDAP files
+ldap_2009_12 <- read.csv("C:\\Users\\Shawn\\Documents\\CyberAmongus\\r4.2\\r4.2\\LDAP\\2009-12.csv")
+ldap_2010_01 <- read.csv("C:\\Users\\Shawn\\Documents\\CyberAmongus\\r4.2\\r4.2\\LDAP\\2010-01.csv")
+ldap_2010_02 <- read.csv("C:\\Users\\Shawn\\Documents\\CyberAmongus\\r4.2\\r4.2\\LDAP\\2010-02.csv")
+ldap_2010_03 <- read.csv("C:\\Users\\Shawn\\Documents\\CyberAmongus\\r4.2\\r4.2\\LDAP\\2010-03.csv")
+ldap_2010_04 <- read.csv("C:\\Users\\Shawn\\Documents\\CyberAmongus\\r4.2\\r4.2\\LDAP\\2010-04.csv")
+ldap_2010_05 <- read.csv("C:\\Users\\Shawn\\Documents\\CyberAmongus\\r4.2\\r4.2\\LDAP\\2010-05.csv")
+ldap_2010_06 <- read.csv("C:\\Users\\Shawn\\Documents\\CyberAmongus\\r4.2\\r4.2\\LDAP\\2010-06.csv")
+ldap_2010_07 <- read.csv("C:\\Users\\Shawn\\Documents\\CyberAmongus\\r4.2\\r4.2\\LDAP\\2010-07.csv")
+ldap_2010_08 <- read.csv("C:\\Users\\Shawn\\Documents\\CyberAmongus\\r4.2\\r4.2\\LDAP\\2010-08.csv")
+ldap_2010_09 <- read.csv("C:\\Users\\Shawn\\Documents\\CyberAmongus\\r4.2\\r4.2\\LDAP\\2010-09.csv")
+ldap_2010_10 <- read.csv("C:\\Users\\Shawn\\Documents\\CyberAmongus\\r4.2\\r4.2\\LDAP\\2010-10.csv")
+ldap_2010_11 <- read.csv("C:\\Users\\Shawn\\Documents\\CyberAmongus\\r4.2\\r4.2\\LDAP\\2010-11.csv")
+ldap_2010_12 <- read.csv("C:\\Users\\Shawn\\Documents\\CyberAmongus\\r4.2\\r4.2\\LDAP\\2010-12.csv")
+ldap_2011_01 <- read.csv("C:\\Users\\Shawn\\Documents\\CyberAmongus\\r4.2\\r4.2\\LDAP\\2011-01.csv")
+ldap_2011_02 <- read.csv("C:\\Users\\Shawn\\Documents\\CyberAmongus\\r4.2\\r4.2\\LDAP\\2011-02.csv")
+ldap_2011_03 <- read.csv("C:\\Users\\Shawn\\Documents\\CyberAmongus\\r4.2\\r4.2\\LDAP\\2011-03.csv")
+ldap_2011_04 <- read.csv("C:\\Users\\Shawn\\Documents\\CyberAmongus\\r4.2\\r4.2\\LDAP\\2011-04.csv")
+ldap_2011_05 <- read.csv("C:\\Users\\Shawn\\Documents\\CyberAmongus\\r4.2\\r4.2\\LDAP\\2011-05.csv")
+
+current_users <- as.list(ldap_2011_05$user_id)
+
+LDAP_list <- list()
+
+# Create a list of all the LDAP dataframes
+LDAP_files <- list.files("C:\\Users\\Shawn\\Documents\\CyberAmongus\\r4.2\\r4.2\\LDAP", pattern = "*.csv", full.names = TRUE)
+
+# Add a new column to each dataframe for the month it corresponds to
+for (i in seq_along(LDAP_files)) {
+  LDAP_list[[i]] <- read.csv(LDAP_files[[i]])
+  LDAP_list[[i]]$month <- paste("month", i, sep="_")
+}
+
+# Combine all LDAP files into a single dataframe
+LDAP_data <- do.call(rbind, LDAP_list)
+
+rm(list = ls(pattern = "ldap_"))
+rm(i)
+```
+
+I am making the y variables for all of the bad_actors present in the dataset. 
+
+```{r}
+all_users <- LDAP_data %>%
+  distinct(user_id) 
+head(all_users)
+```
+```{r}
+feature_risk <- all_users
+feature_risk$y <- ifelse(feature_risk$user_id %in% targets$user_id, 1, 0)
+
+# Preview the updated dataset
+print(table(feature_risk$y))
+```
+Successful! 
+## Feature set initalized
+```{r}
+Feature_data <- feature_risk
+```
+
+
+```{r}
+logon_data <- read.csv("C:\\Users\\Shawn\\Documents\\CyberAmongus\\r4.2\\r4.2\\logon.csv")
+names(logon_data)[names(logon_data) == "user"] <- "user_id"
+```
+
+
+
+
+## Feature Extraction
+Uses LDAP_list, login
+
+
+```{r}
+# Create a function to identify when each employee was last seen
+get_termination_dates <- function(user_lists, month) {
+  termination_dates <- data.frame(user_id = character(), termination_month = character(), stringsAsFactors = FALSE)
+  
+  for (i in 1:(length(user_lists) - 1)) {
+    # Find employees present in month i but not in month i+1 (terminated)
+    terminated_users <- setdiff(user_lists[[i]], user_lists[[i + 1]])
+    
+    # Store the termination month for each employee
+    if (length(terminated_users) > 0) {
+      termination_dates <- rbind(termination_dates, 
+                                 data.frame(user_id = terminated_users, termination_month = month_labels[i], stringsAsFactors = FALSE))
+    }
+  }
+  
+  return(termination_dates)
+}
+
+# List of users per month (from the LDAP data as explained earlier)
+user_lists <- lapply(LDAP_list, function(df) unique(df$user_id))
+
+# Define the month labels corresponding to the LDAP files
+month_labels <- c("2009-12", "2010-01", "2010-02", "2010-03", "2010-04", "2010-05", "2010-06", "2010-07", "2010-08", "2010-09", "2010-10", "2010-11", "2010-12", "2011-01", "2011-02", "2011-03", "2011-04" , "2011-05")
+
+# Get termination dates for employees
+termination_dates <- get_termination_dates(user_lists, month_labels)
+
+# Preview the termination dates
+head(termination_dates)
+
+```
+
+```{r}
+# Filter logon_data to only include logon events for terminated users
+logon_terminated <- logon_data[logon_data$user_id %in% termination_dates$user_id, ]
+
+# Preview filtered logon data
+head(logon_terminated)
+
+```
+```{r}
+# Convert logon date to DateTime format, assuming it's in the format "MM/DD/YYYY HH:MM:SS"
+logon_terminated$date <- as.POSIXct(logon_terminated$date, format = "%m/%d/%Y %H:%M:%S")
+
+# Extract "year-month" format from the logon date
+logon_terminated$logon_month <- format(logon_terminated$date, "%Y-%m")
+
+# Preview logon data with the new logon_month column
+head(logon_terminated)
+
+```
+```{r}
+# Merge the logon_terminated data with the termination_dates data
+logon_terminated <- merge(logon_terminated, termination_dates, by = "user_id", all.x = TRUE)
+
+# Flag unauthorized logons (where logon_month is after termination_month)
+logon_terminated$unauthorized_log <- ifelse(logon_terminated$logon_month > logon_terminated$termination_month, 1, 0)
+
+# Preview the logon data with unauthorized log flag
+head(logon_terminated)
+
+```
+```{r}
+# Summarize the number of unauthorized logon events per user
+unauthorized_log_summary <- logon_terminated %>%
+  group_by(user_id) %>%
+  summarize(unauthorized_log_count = sum(unauthorized_log))
+
+# Preview the summary
+head(unauthorized_log_summary)
+
+```
+
+
+
+RESULT : 155 Terminated Users
+1000 original employees in 2009 - 155 terminated = 845 current employee 
+
+
+
+
+## Risk Features Update
+
+
+```{r}
+# Create the y column (1 if user_id is in the user_list, 0 otherwise)
+feature_risk <- unauthorized_log_summary
+feature_risk$y <- ifelse(feature_risk$user_id %in% targets$user_id, 1, 0)
+
+# Preview the updated dataset
+print(table(feature_risk$y))
+
+```
+So out of the 70 bad_actors. 70 of them comitted unauthorized logons. 
+
+
+```{r}
+Feature_data <- Feature_data %>%
+  left_join(unauthorized_log_summary, by = "user_id") %>%
+  mutate(unauthorized_log_count = ifelse(is.na(unauthorized_log_count), 0, unauthorized_log_count))
+
+
+# Check the result
+head(Feature_data)
+
+```
+Feature_data will now only start taking new features but to start will also take user and y.
+
+
+
+## Visualize Unauthorized Logons
+
+```{r}
+suppressMessages({
+install.packages("ggplot2")
+  library(ggplot2)
+})
+```
+
+```{r}
+library(ggplot2)
+
+# Box plot comparing unauthorized_log_count for bad actors (y = 1) vs non-bad actors (y = 0)
+ggplot(feature_risk, aes(x = as.factor(y), y = unauthorized_log_count)) +
+  geom_boxplot(fill = "lightblue") +
+  labs(x = "Bad Actor (y)", y = "Unauthorized Logon Count", title = "Unauthorized Logons for Bad Actors vs Non-Bad Actors") +
+  theme_minimal()
+
+```
+There are many outliers for the none-bad_actors
+```{r}
+# Scatter plot of unauthorized_log_count vs bad actor status (y)
+ggplot(feature_risk, aes(x = unauthorized_log_count, y = as.factor(y))) +
+  geom_jitter(width = 0.2, height = 0.1, color = "blue") +
+  labs(x = "Unauthorized Logon Count", y = "Bad Actor (y)", title = "Scatter Plot of Unauthorized Logon Count vs Bad Actor") +
+  theme_minimal()
+
+```
+So, Ultimately unauthorized logon counts by themselves can not detect bad_actors. 
+
+```{r}
+rm(termination_dates,unauthorized_log_summary,logon_terminated,logon_data,LDAP_data,feature_risk,LDAP_list)
+```
+
+
+# Feature 2, Sensitive File Access 
+## Preprocessing
+uses file and Feature Data
+
+```{r}
+file_data <- read.csv("C:\\Users\\Shawn\\Documents\\CyberAmongus\\r4.2\\r4.2\\file.csv")
+head(file_data)
+
+```
+
+## Feature Extraction
+Access to sensitive files
+```{r}
+# Example: Define sensitive file types or patterns
+sensitive_file_types <- c("docx", "pdf", "xlsx", "exe")
+sensitive_keywords <- c("confidential", "secret", "financial", "strategy")
+
+# Flag sensitive file access
+file_data <- file_data %>%
+  mutate(is_sensitive = ifelse(grepl(paste(sensitive_file_types, collapse = "|"), filename) |
+                                grepl(paste(sensitive_keywords, collapse = "|"), filename, ignore.case = TRUE), 1, 0))
+
+# Preview sensitive file access
+head(file_data[file_data$is_sensitive == 1, ])
+
+```
+```{r}
+file_data %>%
+summary(is_sensitive)
+```
+There are more 0's than 1's so the file sensitivity is about 20% of the files 
+```{r}
+print(table(file_data$is_sensitive))
+```
+```{r}
+print(90927/354654)
+```
+25.6%
+
+```{r}
+library(dplyr)
+
+# Split the date into its components
+file_access_data <- file_data %>%
+  mutate(date_parsed = as.POSIXct(date, format = "%m/%d/%Y %H:%M:%S"))
+
+# Extract year and month separately
+file_access_data <- file_access_data %>%
+  mutate(year = format(date_parsed, "%Y"),
+         month = format(date_parsed, "%m"),
+         month_year = paste(year, month, sep = "-"))
+
+
+head(file_access_data)
+
+
+
+```
+
+
+Creating baseline and unusual access of sensitive files
+```{r}
+# Step 1: Extract the month and year from the date column (assuming your date format is suitable)
+#file_access_data <- file_access_data %>%
+ # mutate(month_year = format(as.POSIXct(date, format = "%m/%d/%Y/%H/%M/%S"), "%Y-%m"))
+
+# Step 2: Calculate sensitive file access per user per month
+monthly_sensitive_access <- file_access_data %>%
+  filter(is_sensitive == 1) %>%
+  group_by(user, month_year) %>%
+  summarize(sensitive_access_count = n())
+
+# Step 3: Calculate the median access for each user across all months (baseline)
+user_baseline <- monthly_sensitive_access %>%
+  group_by(user) %>%
+  summarize(median_access = median(sensitive_access_count))
+
+# Step 4: Merge the baseline data back into the monthly sensitive access data
+monthly_sensitive_access <- merge(monthly_sensitive_access, user_baseline, by = "user")
+
+# Step 5: Flag users with sensitive file access significantly above their baseline (median + threshold)
+threshold <- 2 # You can adjust this threshold
+monthly_sensitive_access <- monthly_sensitive_access %>%
+  mutate(sensitive_access_flag = ifelse(sensitive_access_count > (median_access + threshold), 1, 0))
+
+# Preview the flagged data
+head(monthly_sensitive_access)
+
+```
+```{r}
+print(table(file_data$is_sensitive))
+```
+
+
+Now to group by User to get total count of senstive files accessed. 
+```{r}
+# Count the number of sensitive file accesses per user
+sensitive_access_count <- monthly_sensitive_access %>%
+  filter(sensitive_access_flag == 1) %>%
+  group_by(user) %>%
+  summarize(sensitive_access_count = n())
+
+# Preview the result
+head(sensitive_access_count)
+
+```
+
+
+## Risk Features Update
+
+
+```{r}
+names(sensitive_access_count)[names(sensitive_access_count) == "user"] <- "user_id"
+Feature_data <- Feature_data %>%
+  left_join(sensitive_access_count, by = "user_id") %>%
+  mutate(sensitive_access_count = ifelse(is.na(sensitive_access_count), 0, sensitive_access_count))
+
+##Feature_data <- Feature_data %>% select(-y)
+head(Feature_data)
+```
+
+```{r}
+# Create the y column (1 if user_id is in the user_list, 0 otherwise)
+feature_risk <- sensitive_access_count
+feature_risk$y <- ifelse(feature_risk$user_id %in% targets$user_id, 1, 0)
+
+# Preview the updated dataset
+print(table(feature_risk$y))
+
+```
+
+## Visualization File Accesses Risk
+```{r}
+library(ggplot2)
+
+# Box plot comparing unauthorized_log_count for bad actors (y = 1) vs non-bad actors (y = 0)
+ggplot(feature_risk, aes(x = as.factor(y), y = sensitive_access_count)) +
+  geom_boxplot(fill = "lightblue") +
+  labs(x = "Bad Actor (y)", y = "Sensitive File Access Count", title = "Count of Sensitive Files Accessed for Bad Actors vs Non-Bad Actors") +
+  theme_minimal()
+
+```
+```{r}
+rm(file_access_data,file_data, monthly_sensitive_access,user_baseline)
+```
+
+
+
+# Feature 3, Emails 
+This section has two parts. The first is for the number of emails involving external domains and the second is for email sentiment. 
+Uses email_data. 
+## Outside Domain Email Frequency
+### Preprocessing 
+
+```{r}
+email_data <- read.csv("C:\\Users\\Shawn\\Documents\\CyberAmongus\\r4.2\\r4.2\\email.csv")
+```
+
+
+
+
+### Feature Extraction
+
+```{r}
+company_domain <- "dtaa.com"
+
+# Step 1: Function to extract and classify email domains
+classify_domains <- function(recipients) {
+  recipients <- unlist(strsplit(recipients, ";"))
+  domains <- sapply(recipients, function(email) sub(".*@", "", email))
+  if (all(domains != company_domain)) {
+    return(1)  # All recipients are external
+  } else {
+    return(0)  # At least one internal recipient
+  }
+}
+
+domain_risk <- email_data %>%
+  select("user")
+
+# Step 2: Apply the function to 'to' column in email_data
+domain_risk$external_flag <- sapply(email_data$to, classify_domains)
+
+# Step 3: Display the result
+print(domain_risk)
+
+```
+```{r}
+names(domain_risk)[names(domain_risk) == "user"] <- "user_id"
+```
+
+### Risk Features Updata
+
+```{r}
+
+domain_risk <- domain_risk %>%
+  filter(external_flag == 1)%>%
+  group_by(user_id) %>%
+  summarize(external_flag_count = n())
+
+```
+
+```{r}
+
+Feature_data <- Feature_data %>%
+  left_join(domain_risk, by = "user_id") %>%
+  mutate(external_flag_count = ifelse(is.na(external_flag_count), 0, external_flag_count))
+
+head(Feature_data)
+```
+```{r}
+# Create the y column (1 if user_id is in the user_list, 0 otherwise)
+feature_risk <- domain_risk
+feature_risk$y <- ifelse(feature_risk$user_id %in% targets$user_id, 1, 0)
+
+# Preview the updated dataset
+print(table(feature_risk$y))
+```
+
+
+### Visualize Domain Risk
+
+```{r}
+library(ggplot2)
+ggplot(feature_risk, aes(x = as.factor(y), y = external_flag_count)) +
+  geom_boxplot(fill = "lightblue") +
+  labs(x = "Bad Actor (y)", y = "Count of external_flags", title = "Count of flagged email domains for Bad Actors vs Non-Bad Actors") +
+  theme_minimal()
+```
+## Email Sentiment
+
+### Packages 
+
+```{r}
+install.packages("tidytext")
+install.packages("stringr")
+install.packages("textdata")
+```
+
+```{r}
+library(tidytext)
+library(dplyr)
+library(stringr)
+```
+
+### Feature Extraction
+
+```{r}
+
+# Step 1: Load AFINN lexicon
+data("sentiments")  # In-built sentiment lexicons in tidytext
+afinn <- get_sentiments("afinn")
+
+# Step 2: Preprocess and tokenize the email content
+email_words <- email_data %>%
+  unnest_tokens(word, content)  # Tokenizes the content column into words
+
+# Step 3: Join with AFINN lexicon to get sentiment scores
+email_sentiment <- email_words %>%
+  inner_join(afinn, by = "word") %>%  # Match words with AFINN sentiment scores
+  group_by(id) %>%                    # Group by email id
+  summarize(sentiment_score = sum(value, na.rm = TRUE))  # Calculate sentiment score
+
+# Step 4: Merge sentiment score back to original email data
+email_data <- email_data %>%
+  left_join(email_sentiment, by = "id") %>%
+  mutate(sentiment_score = ifelse(is.na(sentiment_score), 0, sentiment_score))  # Assign 0 to missing scores
+
+
+```
+
+```{r}
+rm(afinn, email_sentiment, email_words)
+```
+
+```{r}
+# Step 5: Classify sentiment as positive, negative, or neutral
+email_data <- email_data %>%
+  mutate(sentiment_label = case_when(
+    sentiment_score > 0 ~ "Positive",
+    sentiment_score < 0 ~ "Negative",
+    TRUE ~ "Neutral"
+  ))
+
+# View the final result
+print(email_data)
+
+```
+
+
+### Risk Features Updated
+
+```{r}
+sentiment_risk <- email_data %>%
+  filter(sentiment_label == "Negative")%>%
+  group_by(user) %>%
+  summarize(sentiment_label = n())
+# Create the y column (1 if user_id is in the user_list, 0 otherwise)
+feature_risk <- sentiment_risk
+feature_risk$y <- ifelse(feature_risk$user %in% targets$user_id, 1, 0)
+
+# Preview the updated dataset
+print(table(feature_risk$y))
+```
+
+```{r}
+names(sentiment_risk)[names(sentiment_risk) == "user"] <- "user_id"
+Feature_data <- Feature_data %>%
+  left_join(sentiment_risk, by = "user_id")
+
+head(Feature_data)
+```
+
+```{r}
+rm(domain_risk, email_data, sensitive_access_count, sentiment_risk, sentiments, targets)
+```
+
+
+# Supervised Model Learning
+Counts and Ratios: Continue using counts, but also consider ratios and proportions. For example, if you have multiple counts for different actions by a user, create features that represent the ratio of these actions.
+
+Interactions: Create interaction terms between your features to capture more complex patterns.
+## Packages
+```{r}
+install.packages("randomForest")
+install.packages("caret")  # For data splitting and balancing
+
+```
+```{r}
+library(randomForest)
+library(caret)
+```
+
+## Balancing
+
+```{r}
+# Ensure 'y' is a factor
+Feature_data$y <- as.factor(Feature_data$y)
+
+# Balance the dataset by down-sampling
+balanced_data <- downSample(x = Feature_data[, -c(1)], y = Feature_data$y)
+
+```
+
+
+## Training 
+
+```{r}
+set.seed(123)  # For reproducibility
+train_index <- createDataPartition(balanced_data$Class, p = 0.8, list = FALSE)
+
+train_data <- balanced_data[train_index, ]
+test_data <- balanced_data[-train_index, ]
+
+```
+
+```{r}
+set.seed(123)  # For reproducibility
+rf_model <- randomForest(Class ~ ., data = train_data, importance = TRUE, ntree = 500)
+
+# Check the model
+print(rf_model)
+
+```
+## Results
+```{r}
+predictions <- predict(rf_model, newdata = test_data)
+
+# Confusion Matrix
+confusionMatrix(predictions, test_data$Class)
+
+```
+```{r}
+importance(rf_model)
+varImpPlot(rf_model)
+
+```
+
+# The Pycometric Features
+
+Psychometric-Behavioral Risk: 
+
+1 
+
+risk_psycho_behavior: A composite risk score that combines high-risk personality traits (e.g., high Neuroticism or low Conscientiousness) with observed risky behaviors (e.g., unauthorized logons or accessing sensitive files). 
+
+ 
+
+Personality Traits and Off-Hour Activity: 
+
+0 
+
+psycho_extro_offhour: Users with high Extroversion who log in outside of working hours may be more likely to collaborate or socialize, which could suggest either legitimate or risky activity. 
+
+psycho_neuro_offhour: Users with high Neuroticism logging in during off-hours might indicate stress-driven behavior, which could signal potential risks. 
+
+ 
+
+Conscientiousness and Device/File Usage: 
+
+0 
+
+psycho_consc_device_freq: Users with low Conscientiousness could be flagged if they frequently connect external devices, as this could indicate less cautious behavior. 
+
+psycho_consc_file_freq: Similarly, low Conscientiousness and high sensitive file usage might indicate carelessness or intent to exfiltrate data. 
+
+ 
+
+Agreeableness and Social Engineering: 
+
+1 
+
+psycho_agreeableness_email: Users with high Agreeableness might be more susceptible to phishing or social engineering attacks, so their email activity can be monitored for potential risks (e.g., high interaction with unknown external domains). 
+
+Psycho_email_sentiment: Users with negative email sentiment who are also high in neuroticism will be flagged twice as often.  
+
+ 
+
+Neuroticism and High-Risk Activity Clustering: 
+
+1 
+
+psycho_neuro_risk_cluster: Users with high Neuroticism who demonstrate clusters of high-risk activities (e.g., 
+
+```{r}
+psyc_data <- read.csv("C:\\Users\\Shawn\\Documents\\CyberAmongus\\r4.2\\r4.2\\psychometric.csv")
+```
+
